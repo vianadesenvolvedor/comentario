@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comentários Anônimos no GitHub</title>
+    <style>
+        /* Estilos básicos */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .comment-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-top: 50px;
+        }
+        .comment-box {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .comment-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .comment-button:hover {
+            background-color: #45a049;
+        }
+        .comments-list {
+            margin-top: 20px;
+        }
+        .comment {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="comment-container">
+        <h2>Comentários Anônimos</h2>
+
+        <textarea id="comment-box" class="comment-box" rows="4" placeholder="Digite seu comentário..."></textarea>
+        <br>
+        <button class="comment-button" onclick="submitComment()">Enviar Comentário</button>
+
+        <div class="comments-list" id="comments-list">
+            <!-- Comentários serão exibidos aqui -->
+        </div>
+    </div>
+
+    <script>
+        const GITHUB_TOKEN = 'SEU_TOKEN_DO_GITHUB'; // Substitua pelo seu token
+        const REPO_OWNER = 'SEU_USUARIO'; // Substitua pelo nome do usuário ou organização
+        const REPO_NAME = 'SEU_REPOSITORIO'; // Substitua pelo nome do repositório
+        const FILE_PATH = 'comentarios.txt'; // Caminho do arquivo onde os comentários serão armazenados
+
+        // Função para enviar o comentário para o GitHub
+        async function submitComment() {
+            const commentBox = document.getElementById('comment-box');
+            const commentText = commentBox.value.trim();
+
+            if (commentText !== "") {
+                // Adiciona o comentário à lista de comentários localmente
+                const commentsList = document.getElementById('comments-list');
+                const newComment = document.createElement('div');
+                newComment.classList.add('comment');
+                newComment.textContent = commentText;
+                commentsList.appendChild(newComment);
+
+                // Envia o comentário para o GitHub
+                await sendCommentToGitHub(commentText);
+
+                // Limpa o campo de texto
+                commentBox.value = "";
+            } else {
+                alert("Por favor, digite um comentário.");
+            }
+        }
+
+        // Função para enviar comentário para o repositório no GitHub
+        async function sendCommentToGitHub(commentText) {
+            const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+
+            // Primeiramente, buscamos o conteúdo atual do arquivo
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `token ${GITHUB_TOKEN}`
+                }
+            });
+            const data = await response.json();
+
+            // Se o arquivo não existe, criamos um novo
+            const base64Content = btoa(commentText + '\n'); // Codificando o comentário em Base64
+            const commitMessage = 'Adicionar comentário';
+
+            const payload = {
+                message: commitMessage,
+                content: data.content ? data.content : base64Content,
+                sha: data.sha || '', // Se o arquivo já existe, vamos usar o SHA para atualizar
+            };
+
+            const postResponse = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${GITHUB_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const postData = await postResponse.json();
+            if (postData.content) {
+                console.log("Comentário enviado com sucesso!");
+            } else {
+                console.error("Erro ao enviar comentário:", postData);
+            }
+        }
+    </script>
+
+</body>
+</html>
